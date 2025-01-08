@@ -1,7 +1,9 @@
 import socket
 import threading
 import sys
+from operator import truediv
 
+reset_input_thing = False
 
 def usage():
     print("IRC simple Python client\n")
@@ -16,12 +18,13 @@ def channel(channel):
 
 # helper function used as thread target
 def print_response():
-    print("Print response thread working    ")
+    global reset_input_thing
     resp = client.get_response()
     if resp:
         msg = resp.strip().split(":")
+        print("\n")
         print("< {}> {}".format(msg[1].split("!")[0], msg[2].strip()))
-
+        reset_input_thing = True
 
 class IRCSimpleClient:
 
@@ -69,7 +72,7 @@ if __name__ == "__main__":
     while(joined == False):
         resp = client.get_response()
         print(resp.strip())
-        if "No Ident response" in resp:
+        if "No Ident response" in resp or "Found your hostname" in resp or "Could not resolve" in resp:
             client.send_cmd("NICK", username)
             client.send_cmd(
                 "USER", "{} * * :{}".format(username, username))
@@ -94,9 +97,13 @@ if __name__ == "__main__":
             joined = True
 
     while(cmd != "/quit"):
-        threading.Thread(target=print_response).start()
-
         cmd = input("< {}> ".format(username)).strip()
+        if reset_input_thing:
+            print("\n< {}> ".format(username))
+            reset_input_thing = False
         if cmd == "/quit":
             client.send_cmd("QUIT", "Good bye!")
         client.send_message_to_channel(cmd)
+
+
+        threading.Thread(target=print_response).start()
